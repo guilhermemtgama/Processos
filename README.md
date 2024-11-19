@@ -1,10 +1,9 @@
 <h2 align="left">Olá👋, me chamo Guilherme M Gama.<br><br>Comecei na área de desenvolvimento e programação a alguns anos via cursos da Udemy, Curso em Video pretendo me especializar na área o mais rapido possivel!<br>Atualmente estou familiarizado com Python, C#, Html5, Css3, JS, PHP, Plataforma Uipath, Vb .Net. Pretendo continuar os estudos seguindo aprimorando meus conhecimentos.</h2>
 
 ###
-<div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=guilhermemtgama&hide_title=false&hide_rank=false&show_icons=true&include_all_commits=true&count_private=true&disable_animations=false&theme=dracula&locale=en&hide_border=false" height="150" alt="stats graph"  />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs?username=guilhermemtgama&locale=en&hide_title=false&layout=compact&card_width=320&langs_count=5&theme=dracula&hide_border=false" height="150" alt="languages graph"  />
-</div>
+![GitHub Stats](https://github-readme-stats.vercel.app/api?username=guilhermemtgama&hide_title=false&hide_rank=false&show_icons=true&include_all_commits=true&count_private=true&disable_animations=false&theme=dracula&locale=en&hide_border=false)
+![Top Languages](https://github-readme-stats.vercel.app/api/top-langs?username=guilhermemtgama&locale=en&hide_title=false&layout=compact&card_width=320&langs_count=5&theme=dracula&hide_border=false)
+
 
 ###
 <div align="left">
