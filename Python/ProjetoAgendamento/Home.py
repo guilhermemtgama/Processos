@@ -3,9 +3,8 @@ import flet as ft
 # Lista para armazenar os usuários cadastrados
 users = []
 
-
 def main(page: ft.Page):
-    page.title = "Login e Cadastro"
+    page.title = "Sistema de Login e Menu Interativo"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.bgcolor = "#e6f7ff"
@@ -78,102 +77,96 @@ def main(page: ft.Page):
         )
         page.update()
 
-    def show_forgot_password_screen(e):
-        def on_confirm_click(e):
-            if email_field.value:
-                dialog = ft.AlertDialog(title=ft.Text("Um link de redefinição foi enviado para o seu email."))
-                page.dialog = dialog
-                dialog.open = True
-                page.views.pop()
-                page.update()
-            else:
-                dialog = ft.AlertDialog(title=ft.Text("Por favor, insira um email válido."))
-                page.dialog = dialog
-                dialog.open = True
-                page.update()
-
-        def go_back_to_menu(e):
-            page.views.pop()
-            page.update()
-
-        email_field = ft.TextField(label="Email", hint_text="Digite seu email cadastrado", width=300)
-
-        confirm_button = ft.ElevatedButton(text="Confirmar", on_click=on_confirm_click)
-
-        page.views.append(
-            ft.View(
-                "/forgot_password",
-                controls=[
-                    ft.Text("Redefinir Senha", size=20, weight=ft.FontWeight.BOLD),
-                    email_field,
-                    ft.Row(
-                        [
-                            confirm_button,
-                            ft.ElevatedButton(
-                                text="Voltar ao Menu",
-                                on_click=go_back_to_menu,
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                ],
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=20,
-            )
-        )
-        page.update()
-
     def show_user_page(user):
         def go_back_to_menu(e):
             page.views.pop()
             page.update()
 
-        def show_agenda_screen(e):
-            dialog = ft.AlertDialog(title=ft.Text("Agenda de Recados"))
+        def show_menu_screen(title):
+            dialog = ft.AlertDialog(title=ft.Text(f"Você clicou em: {title}"))
             page.dialog = dialog
             dialog.open = True
             page.update()
 
-        def show_teacher_data_screen(e):
-            dialog = ft.AlertDialog(title=ft.Text("Dados do Professor"))
-            page.dialog = dialog
-            dialog.open = True
-            page.update()
+        # Layout em grade com botões e ícones
+        grid = ft.GridView(
+            expand=1,
+            runs_count=2,  # Número de itens por linha (ajuste conforme necessário)
+            spacing=20,  # Espaçamento horizontal entre os itens
+            run_spacing=20,  # Espaçamento vertical entre os itens
+            controls=[
+                ft.ElevatedButton(
+                    content=ft.Column(
+                        [ft.Icon(ft.icons.BOOK, size=30), ft.Text("Agenda de Recados")],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    on_click=lambda _: show_menu_screen("Agenda de Recados"),
+                    width=150,
+                    height=150,
+                    bgcolor="#ff6666",  # Cor de fundo
+                ),
+                ft.ElevatedButton(
+                    content=ft.Column(
+                        [ft.Icon(ft.icons.PERSON, size=30), ft.Text("Dados do Professor")],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    on_click=lambda _: show_menu_screen("Dados do Professor"),
+                    width=150,
+                    height=150,
+                    bgcolor="#66b3ff",  # Cor de fundo
+                ),
+                ft.ElevatedButton(
+                    content=ft.Column(
+                        [ft.Icon(ft.icons.CALENDAR_MONTH, size=30), ft.Text("Calendário")],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    on_click=lambda _: show_menu_screen("Calendário"),
+                    width=150,
+                    height=150,
+                    bgcolor="#99ff99",  # Cor de fundo
+                ),
+                ft.ElevatedButton(
+                    content=ft.Column(
+                        [ft.Icon(ft.icons.LOGIN, size=30), ft.Text("Menu de Entrada e Saída")],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    on_click=lambda _: show_menu_screen("Menu de Entrada e Saída"),
+                    width=150,
+                    height=150,
+                    bgcolor="#ffcc66",  # Cor de fundo
+                ),
+                ft.ElevatedButton(
+                    content=ft.Column(
+                        [ft.Icon(ft.icons.PAYMENTS, size=30), ft.Text("Dia de Pagamento")],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    on_click=lambda _: show_menu_screen("Dia de Pagamento"),
+                    width=150,
+                    height=150,
+                    bgcolor="#ff99cc",  # Cor de fundo
+                ),
+            ],
+        )
 
-        def show_calendar_screen(e):
-            dialog = ft.AlertDialog(title=ft.Text("Calendário"))
-            page.dialog = dialog
-            dialog.open = True
-            page.update()
-
-        def show_entry_exit_screen(e):
-            dialog = ft.AlertDialog(title=ft.Text("Menu de Entrada e Saída"))
-            page.dialog = dialog
-            dialog.open = True
-            page.update()
-
-        def show_payment_day_screen(e):
-            dialog = ft.AlertDialog(title=ft.Text("Dia de Pagamento"))
-            page.dialog = dialog
-            dialog.open = True
-            page.update()
-
+        # Adicionando o GridView à view
         page.views.append(
             ft.View(
                 f"/user/{user['name']}",
                 controls=[
                     ft.Text(f"Bem-vindo, {user['name']}!", size=20, weight=ft.FontWeight.BOLD),
                     ft.Text(f"Email: {user['email']}", size=16),
-                    ft.ElevatedButton(text="Agenda de Recados", on_click=show_agenda_screen),
-                    ft.ElevatedButton(text="Dados do Professor", on_click=show_teacher_data_screen),
-                    ft.ElevatedButton(text="Calendário", on_click=show_calendar_screen),
-                    ft.ElevatedButton(text="Menu de Entrada e Saída", on_click=show_entry_exit_screen),
-                    ft.ElevatedButton(text="Dia de Pagamento", on_click=show_payment_day_screen),
+                    ft.Divider(),
+                    grid,  # Layout em grade com botões
                     ft.ElevatedButton(text="Voltar ao Menu", on_click=go_back_to_menu),
                 ],
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.MainAxisAlignment.START,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=20,
             )
         )
         page.update()
@@ -192,7 +185,7 @@ def main(page: ft.Page):
     )
 
     password_field = ft.TextField(
-        label="Password",
+        label="Senha",
         hint_text="Digite sua senha",
         password=True,
         can_reveal_password=True,
@@ -201,7 +194,7 @@ def main(page: ft.Page):
     )
 
     remember_me = ft.Checkbox(label="Remember me")
-    forgot_password = ft.TextButton("Forgot Password?", on_click=show_forgot_password_screen)
+    forgot_password = ft.TextButton("Forgot Password?", on_click=lambda _: show_register_screen(None))
 
     login_button = ft.ElevatedButton(text="LOGIN", width=300, on_click=on_login_click)
     register_button = ft.TextButton(text="Cadastrar", on_click=show_register_screen)
@@ -221,6 +214,5 @@ def main(page: ft.Page):
             spacing=20,
         )
     )
-
 
 ft.app(target=main)
