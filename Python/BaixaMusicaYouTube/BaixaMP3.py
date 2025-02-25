@@ -1,492 +1,118 @@
-# import os
-# import tkinter as tk
-# from tkinter import ttk, messagebox
-# from yt_dlp import YoutubeDL 
-# from threading import Thread, Event
-# import ttkbootstrap as ttkb
-# from ttkbootstrap.constants import *
-# from imageio_ffmpeg import get_ffmpeg_exe
-# import unicodedata
-
-# # Controle de pausa e interrupção
-# pause_event = Event()
-# stop_event = Event()
-
-# # Configuração da janela principal
-# root = ttkb.Window(themename="flatly")  # Tema mais limpo e minimalista
-# root.title("Music Downloader")
-# root.geometry("1000x700")  # Ajusta o tamanho da janela
-# root.resizable(True, True)  # Permite o redimensionamento da janela
-
-# # Variáveis globais
-# downloads = []  # Lista de downloads
-# current_download = {"active": False, "music": None, "artist": None}
-# progress_dict = {}
-
-# # Lista de sinônimos ou abreviações para alguns artistas
-# artist_synonyms = {
-#     "Michael Jackson": ["MJ", "King of Pop"],
-#     "The Beatles": ["Beatles", "Fab Four"],
-#     "Ariana Grande": ["Ari", "Grande"],
-#     # Adicione mais conforme necessário
-# }
-
-
-# def remove_accents(input_str):
-#     """Remove acentos de uma string."""
-#     nfkd_form = unicodedata.normalize('NFKD', input_str)
-#     return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
-
-
-# def normalize_artist_name(artist_name):
-#     """Normaliza o nome do artista para verificar sinônimos, sem considerar acentos."""
-#     artist_name = remove_accents(artist_name.lower())  # Remove acentos antes de normalizar
-#     for key, synonyms in artist_synonyms.items():
-#         # Normaliza o nome do artista e os sinônimos, removendo acentos também
-#         normalized_key = remove_accents(key.lower())
-#         normalized_synonyms = [remove_accents(synonym.lower()) for synonym in synonyms]
-
-#         if artist_name == normalized_key or artist_name in normalized_synonyms:
-#             return key
-#     return artist_name
-
-
-# def is_cover(description):
-#     """Verifica se o vídeo é um cover ou não com base na descrição."""
-#     # Listas de palavras-chave para identificar covers
-#     cover_keywords = ["cover", "performed by", "tribute", "interpretation", "version"]
-#     official_keywords = ["official video", "official music video", "album", "track", "single", "official release"]
-
-#     # Verifica se algum termo de cover aparece na descrição
-#     for keyword in cover_keywords:
-#         if keyword.lower() in description.lower():
-#             return True  # Se encontrar "cover", assume que é um cover
-
-#     # Verifica se algum termo de video oficial aparece
-#     for keyword in official_keywords:
-#         if keyword.lower() in description.lower():
-#             return False  # Se encontrar "official video", assume que é a versão original
-
-#     # Caso não encontre nada, assume que pode ser um conteúdo original
-#     return False
-
-
-# def validate_artist(song, artist_name):
-#     """Valida o artista baseado na descrição e na letra da música."""
-#     normalized_artist = normalize_artist_name(artist_name)
-#     title = song["title"].lower()
-#     description = song.get("description", "").lower()
-
-#     # Remover acentos do título e da descrição também
-#     title = remove_accents(title)
-#     description = remove_accents(description)
-
-#     # Verifica se o nome do artista aparece no título ou na descrição
-#     artist_found_in_title = normalized_artist in title
-#     artist_found_in_description = normalized_artist in description
-
-#     # Verifica se o vídeo é de estúdio e não contém termos inválidos como "ao vivo" ou "acoustic"
-#     invalid_terms = ["ao vivo"]
-#     contains_invalid_term = any(term in title or term in description for term in invalid_terms)
-
-#     if is_cover(description):
-#         # Caso o vídeo seja um cover, marque como não válido para evitar erro
-#         contains_invalid_term = True
-
-#     # Se o nome do artista foi encontrado no título ou descrição e não for inválido
-#     if (artist_found_in_title or artist_found_in_description) and not contains_invalid_term:
-#         return True
-#     return False
-
-
-# def get_ydl_opts(artist, download_idx):
-#     """Configurações do YoutubeDL com índice do download."""
-#     artist_folder = artist if artist else "Desconhecido"
-#     download_path = os.path.join("Downloads", artist_folder)
-#     os.makedirs(download_path, exist_ok=True)
-
-#     return {
-#         'format': 'bestaudio/best',
-#         'outtmpl': os.path.join(download_path, '%(title)s.%(ext)s'),
-#         'ffmpeg_location': get_ffmpeg_exe(),  # Obtém o caminho do FFmpeg
-#         'progress_hooks': [lambda d: progress_hook(d, download_idx)],  # Passa o índice para o hook
-#         'postprocessors': [{
-#             'key': 'FFmpegExtractAudio',
-#             'preferredcodec': 'mp3',
-#             'preferredquality': '192',
-#         }],
-#     }
-
-
-# def progress_hook(d, download_idx):
-#     """Atualiza a barra de progresso durante o download."""
-#     if d['status'] == 'downloading':
-#         total = d.get('total_bytes', 1)
-#         downloaded = d.get('downloaded_bytes', 0)
-#         percent = int(downloaded * 100 / total)
-
-#         # Atualiza o progresso apenas se houver progresso real
-#         if percent > 0:
-#             downloads[download_idx]["progress"] = percent  # Atualiza o progresso específico
-#             update_table()  # Atualiza a tabela para refletir o progresso
-#             progress_label.config(text=f"Progresso geral: {percent}%")
-#         else:
-#             downloads[download_idx]["progress"] = 0  # Mantém o progresso como 0 se não houver progresso real
-#             update_table()
-
-#     elif d['status'] == 'finished':
-#         downloads[download_idx]["progress"] = 100
-#         downloads[download_idx]["status"] = "Concluído"
-#         update_table()
-
-# def update_overall_progress():
-#     """Atualiza a barra de progresso geral e altera sua cor com base no status."""
-#     total_progress = sum(download["progress"] for download in downloads) / len(downloads) if downloads else 0
-#     progress_bar["value"] = total_progress
-#     progress_label.config(text=f"Progresso geral: {int(total_progress)}%")
-
-#     # Alterando a cor da barra de progresso conforme o status
-#     if total_progress < 30:
-#         progress_bar.config(bootstyle="info")  # Cor inicial (azul ou cinza, dependendo do tema)
-#     elif total_progress < 70:
-#         progress_bar.config(bootstyle="warning")  # Cor intermediária (amarelo)
-#     elif total_progress >= 70:
-#         progress_bar.config(bootstyle="success")  # Cor final (verde claro)
-
-# def pause_download():
-#     """Pausa ou retoma o download."""
-#     if pause_event.is_set():
-#         pause_event.clear()  # Retoma o download
-#         pause_button.config(text="Pausar")
-#     else:
-#         pause_event.set()  # Pausa o download
-#         pause_button.config(text="Retomar")
-
-# def update_table():
-#     """Atualiza a tabela com a lista de downloads."""
-#     for i in download_table.get_children():
-#         download_table.delete(i)
-
-#     for idx, download in enumerate(downloads):
-#         download_table.insert("", "end", values=(
-#             idx + 1,
-#             download["music"],
-#             download["artist"],
-#             download["status"],
-#             f"{download['progress']}%"
-#         ))
-
-# def add_to_queue():
-#     """Adiciona músicas à fila de downloads, evitando duplicados."""
-#     music = search_entry.get().strip()
-#     artist = artist_entry.get().strip() or "Desconhecido"
-#     if not music:
-#         messagebox.showwarning("Aviso", "Insira uma música para adicionar à fila.")
-#         return
-
-#     music_list = [m.strip() for m in music.split(',')]
-
-#     for music_item in music_list:
-#         if music_item:  # Adiciona música apenas se não for uma string vazia
-#             # Verifica se a música já foi adicionada à fila
-#             if any(download["music"].lower() == music_item.lower() and download["artist"].lower() == artist.lower() for
-#                    download in downloads):
-#                 messagebox.showwarning("Aviso", f"A música '{music_item}' de '{artist}' já está na fila.")
-#             else:
-#                 downloads.append(
-#                     {"music": music_item, "artist": artist, "status": "Pendente", "progress": 0}
-#                 )
-
-#     update_table()
-
-# def start_download():
-#     """Inicia o próximo download da fila de forma contínua."""
-#     if current_download["active"] or not downloads:
-#         return  # Se já houver um download ativo ou a lista estiver vazia, não faz nada
-
-#     # Procura o próximo download com status "Pendente"
-#     for download in downloads:
-#         if download["status"] == "Pendente":
-#             download["status"] = "Baixando"
-#             current_download["active"] = True
-#             current_download["music"] = download["music"]
-#             current_download["artist"] = download["artist"]
-#             update_table()
-#             Thread(target=perform_download, args=(download,)).start()  # Inicia o download em uma nova thread
-#             break  # Sai do loop após iniciar o download
-
-
-
-# def perform_download(download):
-#     """Realiza o download com validação rigorosa do artista."""
-#     attempts = 0
-#     max_attempts = 3
-#     found_artist = False
-
-#     # Obtém o índice do download na lista para atualizar o progresso corretamente
-#     download_idx = downloads.index(download)
-
-#     while attempts < max_attempts and not found_artist:
-#         try:
-#             ydl_opts = get_ydl_opts(download["artist"], download_idx)
-#             with YoutubeDL(ydl_opts) as ydl:
-#                 result = ydl.extract_info(f"ytsearch:{download['music']} {download['artist']}", download=False)
-#                 if result and 'entries' in result:
-#                     song = result['entries'][0]
-
-#                     # Validação do artista usando a nova função
-#                     if validate_artist(song, download["artist"]):
-#                         found_artist = True
-#                         ydl.download([song['id']])
-#                     else:
-#                         # Se o artista não for encontrado ou o vídeo for inválido, tenta novamente
-#                         attempts += 1
-#                         download["status"] = f"Tentando novamente ({attempts}/{max_attempts})"
-#                         download["progress"] = 0
-#                         update_table()
-#                         continue
-
-#                 if not found_artist:
-#                     download["status"] = "Falha no Download"
-#                     update_table()
-#                     break  # Não continua a execução
-
-#         except Exception as e:
-#             attempts += 1
-#             if attempts == max_attempts:
-#                 download["status"] = f"Erro: {e}"
-#                 download["progress"] = 0  # Garante que o progresso é 0 em caso de erro
-#                 update_table()
-
-#     if found_artist:
-#         download["status"] = "Concluído"
-#         update_table()
-
-#     # Atualiza o progresso geral
-#     update_overall_progress()
-
-#     # Marca o download atual como concluído
-#     current_download["active"] = False
-
-#     # Inicia o próximo download após o término
-#     start_download()  # Isso garantirá que o próximo download seja iniciado
-
-
-# # Layout com grid para maior controle
-# frame_left = ttk.Frame(root)
-# frame_left.grid(row=0, column=0, padx=20, pady=20, sticky=N)
-
-# frame_right = ttk.Frame(root)
-# frame_right.grid(row=0, column=1, padx=20, pady=20, sticky=N)
-
-# # Frame à esquerda com os controles de busca e adicionar
-# search_label = ttk.Label(frame_left, text="Música (separada por vírgula):")
-# search_label.grid(row=0, column=0, padx=10, pady=5, sticky=W)
-
-# search_entry = ttk.Entry(frame_left, width=40)
-# search_entry.grid(row=0, column=1, padx=10, pady=5)
-
-# artist_label = ttk.Label(frame_left, text="Artista (opcional):")
-# artist_label.grid(row=1, column=0, padx=10, pady=5, sticky=W)
-
-# artist_entry = ttk.Entry(frame_left, width=40)
-# artist_entry.grid(row=1, column=1, padx=10, pady=5)
-
-# # Frame à direita com os botões
-# add_button = ttk.Button(frame_right, text="Adicionar à Fila", command=add_to_queue)
-# add_button.grid(row=0, column=0, padx=10, pady=5)
-
-# download_button = ttk.Button(frame_right, text="Iniciar Download", command=start_download)
-# download_button.grid(row=1, column=0, padx=10, pady=5)
-
-# pause_button = ttk.Button(frame_right, text="Pausar", command=pause_download)
-# pause_button.grid(row=2, column=0, padx=10, pady=5)
-
-# # Frame para a tabela e barra de progresso na parte inferior
-# table_frame = ttk.Frame(root)
-# table_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=20, sticky=NSEW)
-
-# columns = ("ID", "Música", "Artista", "Status", "Progresso")
-# download_table = ttk.Treeview(table_frame, columns=columns, show="headings", height=10)
-# download_table.grid(row=0, column=0, padx=10, pady=10, sticky=NSEW)
-
-# # Definir colunas
-# for col in columns:
-#     download_table.heading(col, text=col)
-#     download_table.column(col, anchor=CENTER)
-
-# progress_bar = ttk.Progressbar(table_frame, orient=HORIZONTAL, length=500, mode="determinate")
-# progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=NSEW)
-
-# progress_label = ttk.Label(table_frame, text="Progresso geral: 0%")
-# progress_label.grid(row=2, column=0, padx=10, pady=5)
-
-# root.mainloop()
 import os
 import tkinter as tk
-from tkinter import ttk, messagebox
-from yt_dlp import YoutubeDL 
-from threading import Thread, Event
+from tkinter import ttk, messagebox, filedialog
+from yt_dlp import YoutubeDL
+from threading import Thread
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 from imageio_ffmpeg import get_ffmpeg_exe
-import unicodedata
-
-# Controle de pausa e interrupção
-pause_event = Event()
-stop_event = Event()
+import logging
 
 # Configuração da janela principal
-root = ttkb.Window(themename="cosmo")  # Tema moderno e agradável
-root.title("Music Downloader")
-root.geometry("1000x700")  # Ajusta o tamanho da janela
-root.resizable(True, True)  # Permite o redimensionamento da janela
+root = ttkb.Window(themename="minty")  # Tema moderno e colorido
+root.title("Music Dashboard")
+root.geometry("1000x700")  # Tamanho da janela
+root.resizable(False, False)  # Impede redimensionamento
 
 # Variáveis globais
 downloads = []  # Lista de downloads
 current_download = {"active": False, "music": None, "artist": None}
-progress_dict = {}
+download_folder = "Downloads"  # Pasta padrão para downloads
+statistics = {"total_downloads": 0, "total_errors": 0}  # Estatísticas de uso
 
-# Lista de sinônimos ou abreviações para alguns artistas
-artist_synonyms = {
-    "Michael Jackson": ["MJ", "King of Pop"],
-    "The Beatles": ["Beatles", "Fab Four"],
-    "Ariana Grande": ["Ari", "Grande"],
-    # Adicione mais conforme necessário
-}
+# Configuração de logging
+logging.basicConfig(filename="errors.log", level=logging.ERROR)
 
-def remove_accents(input_str):
-    """Remove acentos de uma string."""
-    nfkd_form = unicodedata.normalize('NFKD', input_str)
-    return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+# Função para validar entrada
+def validate_input(music, artist):
+    if not music:
+        messagebox.showwarning("Aviso", "O campo 'Nome da Música' é obrigatório.")
+        return False
+    return True
 
-def normalize_artist_name(artist_name):
-    """Normaliza o nome do artista para verificar sinônimos, sem considerar acentos."""
-    artist_name = remove_accents(artist_name.lower())  # Remove acentos antes de normalizar
-    for key, synonyms in artist_synonyms.items():
-        # Normaliza o nome do artista e os sinônimos, removendo acentos também
-        normalized_key = remove_accents(key.lower())
-        normalized_synonyms = [remove_accents(synonym.lower()) for synonym in synonyms]
+# Função para baixar música
+def download_music():
+    music = entry_music.get().strip()
+    artist = entry_artist.get().strip() or "Desconhecido"
+    quality = quality_var.get()
 
-        if artist_name == normalized_key or artist_name in normalized_synonyms:
-            return key
-    return artist_name
+    if not validate_input(music, artist):
+        return
 
-def is_cover(description):
-    """Verifica se o vídeo é um cover ou não com base na descrição."""
-    # Listas de palavras-chave para identificar covers
-    cover_keywords = ["cover", "performed by", "tribute", "interpretation", "version"]
-    official_keywords = ["official video", "official music video", "album", "track", "single", "official release"]
+    # Adiciona à lista de downloads
+    downloads.append({"music": music, "artist": artist, "status": "Pendente", "progress": 0, "quality": quality})
+    update_table()
 
-    # Verifica se algum termo de cover aparece na descrição
-    for keyword in cover_keywords:
-        if keyword.lower() in description.lower():
-            return True  # Se encontrar "cover", assume que é um cover
+    # Inicia o download em uma nova thread
+    if not current_download["active"]:
+        start_download()
 
-    # Verifica se algum termo de video oficial aparece
-    for keyword in official_keywords:
-        if keyword.lower() in description.lower():
-            return False  # Se encontrar "official video", assume que é a versão original
+# Função para iniciar o download
+def start_download():
+    if current_download["active"] or not downloads:
+        return
 
-    # Caso não encontre nada, assume que pode ser um conteúdo original
-    return False
+    # Pega o próximo download pendente
+    for download in downloads:
+        if download["status"] == "Pendente":
+            current_download["active"] = True
+            current_download["music"] = download["music"]
+            current_download["artist"] = download["artist"]
+            download["status"] = "Baixando"
+            update_table()
 
-def validate_artist(song, artist_name):
-    """Valida o artista baseado na descrição e na letra da música."""
-    normalized_artist = normalize_artist_name(artist_name)
-    title = song["title"].lower()
-    description = song.get("description", "").lower()
+            # Inicia o download em uma nova thread
+            Thread(target=perform_download, args=(download,)).start()
+            break
 
-    # Remover acentos do título e da descrição também
-    title = remove_accents(title)
-    description = remove_accents(description)
+# Função para realizar o download
+def perform_download(download):
+    try:
+        # Configurações do yt-dlp
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': os.path.join(download_folder, f"{download['artist']} - {download['music']}.%(ext)s"),
+            'ffmpeg_location': get_ffmpeg_exe(),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': download["quality"],
+            }],
+            'progress_hooks': [lambda d: progress_hook(d, download)],  # Atualiza o progresso
+        }
 
-    # Verifica se o nome do artista aparece no título ou na descrição
-    artist_found_in_title = normalized_artist in title
-    artist_found_in_description = normalized_artist in description
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f"ytsearch:{download['music']} {download['artist']}"])
 
-    # Verifica se o vídeo é de estúdio e não contém termos inválidos como "ao vivo" ou "acoustic"
-    invalid_terms = ["ao vivo"]
-    contains_invalid_term = any(term in title or term in description for term in invalid_terms)
+        download["status"] = "Concluído"
+        download["progress"] = 100
+        statistics["total_downloads"] += 1
+    except Exception as e:
+        download["status"] = f"Erro: {e}"
+        statistics["total_errors"] += 1
+        logging.error(f"Erro durante o download: {e}")
+    finally:
+        current_download["active"] = False
+        update_table()
+        update_statistics()
+        start_download()  # Inicia o próximo download
 
-    if is_cover(description):
-        # Caso o vídeo seja um cover, marque como não válido para evitar erro
-        contains_invalid_term = True
-
-    # Se o nome do artista foi encontrado no título ou descrição e não for inválido
-    if (artist_found_in_title or artist_found_in_description) and not contains_invalid_term:
-        return True
-    return False
-
-def get_ydl_opts(artist, download_idx):
-    """Configurações do YoutubeDL com índice do download."""
-    artist_folder = artist if artist else "Desconhecido"
-    download_path = os.path.join("Downloads", artist_folder)
-    os.makedirs(download_path, exist_ok=True)
-
-    return {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(download_path, '%(title)s.%(ext)s'),
-        'ffmpeg_location': get_ffmpeg_exe(),  # Obtém o caminho do FFmpeg
-        'progress_hooks': [lambda d: progress_hook(d, download_idx)],  # Passa o índice para o hook
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
-
-def progress_hook(d, download_idx):
-    """Atualiza a barra de progresso durante o download."""
+# Função para atualizar o progresso
+def progress_hook(d, download):
     if d['status'] == 'downloading':
         total = d.get('total_bytes', 1)
         downloaded = d.get('downloaded_bytes', 0)
         percent = int(downloaded * 100 / total)
-
-        # Atualiza o progresso apenas se houver progresso real
-        if percent > 0:
-            downloads[download_idx]["progress"] = percent  # Atualiza o progresso específico
-            update_table()  # Atualiza a tabela para refletir o progresso
-            progress_label.config(text=f"Progresso geral: {percent}%")
-        else:
-            downloads[download_idx]["progress"] = 0  # Mantém o progresso como 0 se não houver progresso real
-            update_table()
-
-    elif d['status'] == 'finished':
-        downloads[download_idx]["progress"] = 100
-        downloads[download_idx]["status"] = "Concluído"
+        download["progress"] = percent
         update_table()
 
-def update_overall_progress():
-    """Atualiza a barra de progresso geral e altera sua cor com base no status."""
-    total_progress = sum(download["progress"] for download in downloads) / len(downloads) if downloads else 0
-    progress_bar["value"] = total_progress
-    progress_label.config(text=f"Progresso geral: {int(total_progress)}%")
-
-    # Alterando a cor da barra de progresso conforme o status
-    if total_progress < 30:
-        progress_bar.config(bootstyle="info")  # Cor inicial (azul ou cinza, dependendo do tema)
-    elif total_progress < 70:
-        progress_bar.config(bootstyle="warning")  # Cor intermediária (amarelo)
-    elif total_progress >= 70:
-        progress_bar.config(bootstyle="success")  # Cor final (verde claro)
-
-def pause_download():
-    """Pausa ou retoma o download."""
-    if pause_event.is_set():
-        pause_event.clear()  # Retoma o download
-        pause_button.config(text="Pausar")
-    else:
-        pause_event.set()  # Pausa o download
-        pause_button.config(text="Retomar")
-
+# Função para atualizar a tabela de downloads
 def update_table():
-    """Atualiza a tabela com a lista de downloads."""
-    for i in download_table.get_children():
-        download_table.delete(i)
+    for row in table.get_children():
+        table.delete(row)
 
     for idx, download in enumerate(downloads):
-        download_table.insert("", "end", values=(
+        table.insert("", "end", values=(
             idx + 1,
             download["music"],
             download["artist"],
@@ -494,146 +120,100 @@ def update_table():
             f"{download['progress']}%"
         ))
 
-def add_to_queue():
-    """Adiciona músicas à fila de downloads, evitando duplicados."""
-    music = search_entry.get().strip()
-    artist = artist_entry.get().strip() or "Desconhecido"
-    if not music:
-        messagebox.showwarning("Aviso", "Insira uma música para adicionar à fila.")
-        return
+    # Atualiza a barra de progresso geral
+    total_progress = sum(download["progress"] for download in downloads) / len(downloads) if downloads else 0
+    progress_bar["value"] = total_progress
+    progress_label.config(text=f"Progresso geral: {int(total_progress)}%")
 
-    music_list = [m.strip() for m in music.split(',')]
+# Função para atualizar estatísticas
+def update_statistics():
+    stats_label.config(text=f"Total de Downloads: {statistics['total_downloads']} | Erros: {statistics['total_errors']}")
 
-    for music_item in music_list:
-        if music_item:  # Adiciona música apenas se não for uma string vazia
-            # Verifica se a música já foi adicionada à fila
-            if any(download["music"].lower() == music_item.lower() and download["artist"].lower() == artist.lower() for
-                   download in downloads):
-                messagebox.showwarning("Aviso", f"A música '{music_item}' de '{artist}' já está na fila.")
-            else:
-                downloads.append(
-                    {"music": music_item, "artist": artist, "status": "Pendente", "progress": 0}
-                )
+# Função para selecionar pasta de download
+def select_folder():
+    global download_folder
+    folder = filedialog.askdirectory()
+    if folder:
+        download_folder = folder
+        folder_label.config(text=f"Pasta: {folder}")
 
+# Função para limpar a fila de downloads concluídos
+def clear_queue():
+    global downloads
+    downloads = [d for d in downloads if d["status"] != "Concluído"]
     update_table()
 
-def start_download():
-    """Inicia o próximo download da fila de forma contínua."""
-    if current_download["active"] or not downloads:
-        return  # Se já houver um download ativo ou a lista estiver vazia, não faz nada
+# Layout da interface
+frame_top = ttkb.Frame(root)
+frame_top.pack(pady=20, padx=20, fill="x")
 
-    # Procura o próximo download com status "Pendente"
-    for download in downloads:
-        if download["status"] == "Pendente":
-            download["status"] = "Baixando"
-            current_download["active"] = True
-            current_download["music"] = download["music"]
-            current_download["artist"] = download["artist"]
-            update_table()
-            Thread(target=perform_download, args=(download,)).start()  # Inicia o download em uma nova thread
-            break  # Sai do loop após iniciar o download
+# Título do Dashboard
+label_title = ttkb.Label(frame_top, text="MUSIC HITS", font=("Helvetica", 24, "bold"), bootstyle="primary")
+label_title.pack(pady=10)
 
-def perform_download(download):
-    """Realiza o download com validação rigorosa do artista."""
-    attempts = 0
-    max_attempts = 3
-    found_artist = False
+# Campos de entrada
+frame_input = ttkb.Frame(frame_top)
+frame_input.pack(pady=10)
 
-    print(f"Iniciando download: {download['music']} - {download['artist']}")
+label_music = ttkb.Label(frame_input, text="Nome da Música:", font=("Helvetica", 12), bootstyle="primary")
+label_music.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
-    while attempts < max_attempts and not found_artist:
-        try:
-            ydl_opts = get_ydl_opts(download["artist"], downloads.index(download))
-            with YoutubeDL(ydl_opts) as ydl:
-                result = ydl.extract_info(f"ytsearch:{download['music']} {download['artist']}", download=False)
-                print(f"Resultado da pesquisa: {result}")
+entry_music = ttkb.Entry(frame_input, width=40, font=("Helvetica", 12))
+entry_music.grid(row=0, column=1, padx=5, pady=5)
 
-                if result and 'entries' in result:
-                    song = result['entries'][0]
-                    print(f"Vídeo encontrado: {song['title']}")
+label_artist = ttkb.Label(frame_input, text="Artista (opcional):", font=("Helvetica", 12), bootstyle="primary")
+label_artist.grid(row=1, column=0, padx=5, pady=5, sticky="w")
 
-                    if validate_artist(song, download["artist"]):
-                        found_artist = True
-                        print(f"Artista validado: {download['artist']}")
-                        ydl.download([song['id']])
-                    else:
-                        attempts += 1
-                        print(f"Artista não validado. Tentativa {attempts}/{max_attempts}")
-                        download["status"] = f"Tentando novamente ({attempts}/{max_attempts})"
-                        download["progress"] = 0
-                        update_table()
-                        continue
+entry_artist = ttkb.Entry(frame_input, width=40, font=("Helvetica", 12))
+entry_artist.grid(row=1, column=1, padx=5, pady=5)
 
-                if not found_artist:
-                    print("Nenhum vídeo válido encontrado.")
-                    download["status"] = "Falha no Download"
-                    update_table()
-                    break
+# Seleção de qualidade
+label_quality = ttkb.Label(frame_input, text="Qualidade (kbps):", font=("Helvetica", 12), bootstyle="primary")
+label_quality.grid(row=2, column=0, padx=5, pady=5, sticky="w")
 
-        except Exception as e:
-            print(f"Erro durante o download: {e}")
-            attempts += 1
-            if attempts == max_attempts:
-                download["status"] = f"Erro: {e}"
-                download["progress"] = 0
-                update_table()
+quality_var = tk.StringVar(value="192")
+quality_menu = ttkb.Combobox(frame_input, textvariable=quality_var, values=["128", "192", "320"], bootstyle="primary")
+quality_menu.grid(row=2, column=1, padx=5, pady=5)
 
-    if found_artist:
-        print(f"Download concluído: {download['music']}")
-        download["status"] = "Concluído"
-        update_table()
+# Botão de download
+button_download = ttkb.Button(frame_input, text="Baixar", command=download_music, bootstyle="success", width=10)
+button_download.grid(row=3, column=0, columnspan=2, pady=10)
 
-    update_overall_progress()
-    current_download["active"] = False
-    start_download()
+# Botão para selecionar pasta
+folder_button = ttkb.Button(frame_input, text="Selecionar Pasta", command=select_folder, bootstyle="info")
+folder_button.grid(row=4, column=0, padx=5, pady=5)
 
-# Layout com grid para maior controle
-frame_left = ttk.Frame(root)
-frame_left.grid(row=0, column=0, padx=20, pady=20, sticky=N)
+folder_label = ttkb.Label(frame_input, text=f"Pasta: {download_folder}", font=("Helvetica", 10), bootstyle="primary")
+folder_label.grid(row=4, column=1, padx=5, pady=5)
 
-frame_right = ttk.Frame(root)
-frame_right.grid(row=0, column=1, padx=20, pady=20, sticky=N)
-
-# Frame à esquerda com os controles de busca e adicionar
-search_label = ttk.Label(frame_left, text="Música (separada por vírgula):")
-search_label.grid(row=0, column=0, padx=10, pady=5, sticky=W)
-
-search_entry = ttk.Entry(frame_left, width=40)
-search_entry.grid(row=0, column=1, padx=10, pady=5)
-
-artist_label = ttk.Label(frame_left, text="Artista (opcional):")
-artist_label.grid(row=1, column=0, padx=10, pady=5, sticky=W)
-
-artist_entry = ttk.Entry(frame_left, width=40)
-artist_entry.grid(row=1, column=1, padx=10, pady=5)
-
-# Frame à direita com os botões
-add_button = ttk.Button(frame_right, text="Adicionar à Fila", command=add_to_queue)
-add_button.grid(row=0, column=0, padx=10, pady=5)
-
-download_button = ttk.Button(frame_right, text="Iniciar Download", command=start_download)
-download_button.grid(row=1, column=0, padx=10, pady=5)
-
-pause_button = ttk.Button(frame_right, text="Pausar", command=pause_download)
-pause_button.grid(row=2, column=0, padx=10, pady=5)
-
-# Frame para a tabela e barra de progresso na parte inferior
-table_frame = ttk.Frame(root)
-table_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=20, sticky=NSEW)
+# Tabela de downloads
+frame_table = ttkb.Frame(root)
+frame_table.pack(pady=20, padx=20, fill="both", expand=True)
 
 columns = ("ID", "Música", "Artista", "Status", "Progresso")
-download_table = ttk.Treeview(table_frame, columns=columns, show="headings", height=10)
-download_table.grid(row=0, column=0, padx=10, pady=10, sticky=NSEW)
+table = ttk.Treeview(frame_table, columns=columns, show="headings", height=10)
+table.pack(fill="both", expand=True)
 
-# Definir colunas
+# Configuração das colunas
 for col in columns:
-    download_table.heading(col, text=col)
-    download_table.column(col, anchor=CENTER)
+    table.heading(col, text=col)
+    table.column(col, anchor="center", width=100)
 
-progress_bar = ttk.Progressbar(table_frame, orient=HORIZONTAL, length=500, mode="determinate")
-progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=NSEW)
+# Barra de progresso geral
+progress_bar = ttkb.Progressbar(root, orient=HORIZONTAL, length=500, mode="determinate", bootstyle="success-striped")
+progress_bar.pack(pady=10)
 
-progress_label = ttk.Label(table_frame, text="Progresso geral: 0%")
-progress_label.grid(row=2, column=0, padx=10, pady=5)
+# Label para mostrar o progresso geral
+progress_label = ttkb.Label(root, text="Progresso geral: 0%", font=("Helvetica", 10), bootstyle="primary")
+progress_label.pack(pady=5)
 
+# Estatísticas
+stats_label = ttkb.Label(root, text="Total de Downloads: 0 | Erros: 0", font=("Helvetica", 10), bootstyle="primary")
+stats_label.pack(pady=5)
+
+# Botão para limpar a fila
+clear_button = ttkb.Button(root, text="Limpar Fila", command=clear_queue, bootstyle="danger")
+clear_button.pack(pady=10)
+
+# Inicia a interface
 root.mainloop()
